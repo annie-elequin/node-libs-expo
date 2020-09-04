@@ -1,13 +1,13 @@
-# node-libs-react-native
+# node-libs-expo
 
-This package provides React Native compatible implementations of Node core modules like `stream` and `http`. This is a fork of [node-libs-browser][] with a few packages swapped to be compatible in React Native.
+This package provides React Native (Expo) compatible implementations of Node core modules like `stream` and `http`. This is a fork of node-libs-react-native which is a fork of [node-libs-browser][] with a few packages swapped to be compatible in React Native.
 
 [node-libs-browser]: https://www.npmjs.com/package/node-libs-browser
 
 ## Installation
 
 ```
-npm install --save node-libs-react-native
+yarn add node-libs-expo && expo install expo-crypto expo-random
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ Add a `metro.config.js` file in the root directory of your React Native project 
 // metro.config.js
 module.exports = {
   resolver: {
-    extraNodeModules: require('node-libs-react-native'),
+    extraNodeModules: require('node-libs-expo'),
   },
 };
 ```
@@ -35,14 +35,42 @@ For more information, see this post on [Node core modules in React Native][post]
 
 ### Globals
 
-Node has certain globals that modules may expect, such as `Buffer` or `process`. React Native does not provide these globals. The [`node-libs-react-native/globals`][globals] module in this package will shim the global environment to add these globals. Just require (or import) this module in your app before anything else.
+Node has certain globals that modules may expect, such as `Buffer` or `process`. React Native does not provide these globals. The [`node-libs-expo/globals`][globals] module in this package will shim the global environment to add these globals. Just require (or import) this module in your app before anything else.
 
 [globals]: ./globals.js
 
 ```js
-require('node-libs-react-native/globals');
+require('node-libs-expo/globals');
 // ...
 require('./app.js');
+```
+
+### Crypto
+
+If you're trying to use crypto.getRandomValues() specifically, then you need to include this snippet before anything else in your app, but AFTER the "globals" import.
+
+```js
+import * as Random from 'expo-random';
+
+// implement window.getRandomValues(), for packages that rely on it
+if (typeof window === 'object') {
+  if (!window.crypto) window.crypto = {}
+  if (!window.crypto.getRandomValues) {
+    window.crypto.getRandomValues = async function getRandomValues (arr) {
+      let orig = arr
+      if (arr.byteLength != arr.length) {
+        // Get access to the underlying raw bytes
+        arr = new Uint8Array(arr.buffer)
+      }
+      const bytes = await Random.getRandomBytesAsync(arr.length)
+      for (var i = 0; i < bytes.length; i++) {
+        arr[i] = bytes[i]
+      }
+
+      return orig
+    }
+  }
+}
 ```
 
 ## Modules
@@ -57,12 +85,12 @@ The following are the module implementations provided by this package. Some modu
 | cluster | --- | --- |
 | console | [Raynos/console-browserify](https://github.com/Raynos/console-browserify) | [console.js](./mock/console.js) |
 | constants | [juliangruber/constants-browserify](https://github.com/juliangruber/constants-browserify) | --- |
-| crypto | [mvayngrib/react-native-crypto](https://github.com/mvayngrib/react-native-crypto) | --- |
+| crypto | [expo-crypto](https://github.com/expo/expo/tree/master/packages/expo-crypto) | --- |
 | dgram | --- | --- |
 | dns | --- | [dns.js](./mock/dns.js) |
 | domain | [bevry/domain-browser](https://github.com/bevry/domain-browser) | --- |
 | events | [Gozala/events](https://github.com/Gozala/events) | --- |
-| fs | --- | --- |
+| fs | [tradle/react-native-level-fs](https://github.com/tradle/react-native-level-fs) | --- |
 | http | [jhiesey/stream-http](https://github.com/jhiesey/stream-http) | --- |
 | https | [substack/https-browserify](https://github.com/substack/https-browserify) | --- |
 | module | --- | --- |
@@ -88,7 +116,7 @@ The following are the module implementations provided by this package. Some modu
 ## Other React Native Modules
 
 These are other React Native packages that implement Node core related
-modules. They are not included in node-libs-react-native, but you may
+modules. They are not included in node-libs-expo, but you may
 find them useful separately.
 
 ### `dgram`
@@ -98,19 +126,6 @@ here due to its native implementation and need to use `react-native
 link`.
 
 [react-native-udp]: https://github.com/tradle/react-native-udp
-
-### `fs`
-
-[react-native-fs][] implement's Node's `fs` API, but is not included
-here due to its native implementation and need to use `react-native
-link`.
-
-[react-native-fs]: https://github.com/itinance/react-native-fs
-
-[react-native-level-fs][] provides an alternative pure JavaScript
-implementation, using AsyncStorage as the underlying storage mechanism.
-
-[react-native-level-fs]: https://github.com/tradle/react-native-level-fs
 
 ### `net`
 
@@ -122,7 +137,7 @@ link`.
 
 ## Credit
 
-This is a fork of [node-libs-browser][] with minor modifications and packages swapped out for React Native implementations. Thanks to those package authors for doing the hard work.
+This is a fork of node-libs-react-native which is a fork of [node-libs-browser][] with minor modifications and packages swapped out for React Native implementations. Thanks to those package authors for doing the hard work.
 
 ## License
 
